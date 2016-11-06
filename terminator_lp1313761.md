@@ -1,10 +1,10 @@
-# gdb terminator
+# Terminator bug
 
-Crash when caps lock is toggled after starting editing tab title once terminal get focus back. The callstack shows a reference to gtkentry.c:remove_capslock_feedback (line 10099)
+Terminator crashes when caps lock is toggled after starting editing tab title once terminal get focus back. The callstack shows a reference to gtkentry.c:remove_capslock_feedback (line 10099)
 
 Issue on launchpad: https://bugs.launchpad.net/terminator/+bug/1313761
 
-## install sources and debug symbols
+## Install sources and debug symbols
 ```bash
 mkdir ~/terminator
 cd ~/terminator
@@ -12,12 +12,12 @@ apt-get source libgtk2.0-0
 apt-get install libgtk2.0-0-dbg
 ```
 
-## start gdb
+## Start gdb
 ```bash
 gdb `find ~/terminator/ -type d -printf ' -d %p'` --args python2.7 $(which terminator)
 ```
 
-## the suspected function
+## Suspected function
 ```c
 static void
 remove_capslock_feedback(GtkEntry *entry)
@@ -32,12 +32,12 @@ remove_capslock_feedback(GtkEntry *entry)
 }
 ```
 
-## set a breakpoint
+## Set a breakpoint
 ```
 (gdb) b gtkentry.c:remove_capslock_feedback
 ```
 
-## check variables
+## Check variables
 ```
 (gdb) print *entry
 ```
@@ -59,7 +59,7 @@ $8 = {buffer = 0x0, xalign = 0, insert_pos = 0, blink_time = 0, interior_focus =
 $11 = 0
 ```
 
-## let's crash
+## Let's crash
 ```
 (gdb) n
 10101	  GtkEntryPrivate *priv = GTK_ENTRY_GET_PRIVATE (entry);
@@ -71,7 +71,7 @@ Program received signal SIGSEGV, Segmentation fault.
 ```
 The priv->caps_lock_warning_shown is an invalid address.
 
-## display the callstack
+## Display the callstack
 ```
 (gdb) bt
 #0  remove_capslock_feedback (entry=0x108c690) at /build/buildd/gtk+2.0-2.24.23/gtk/gtkentry.c:10103
@@ -104,7 +104,7 @@ The priv->caps_lock_warning_shown is an invalid address.
 #21 0x000000000057497e in _start ()
 ```
 
-## assembly where it crashed
+## Assembly where it crashed
 ```
 (gdb) x/16i remove_capslock_feedback
    0x7ffff4d11900 <remove_capslock_feedback>:	push   %rbp
@@ -133,7 +133,7 @@ rax            0x0	0
 /usr/bin/terminator:118: Warning: g_type_instance_get_private: assertion 'instance != NULL && instance->g_class != NULL'
 ```
 
-## check widget's reference count with and without provoking segfault (use of capslock)
+## Check widget's reference count with and without provoking segfault (use of capslock)
 ```
 (gdb) p *
 $28 = {widget = {object = {parent_instance = {g_type_instance = {g_class = 0xf152b0}, ref_count = 10, ...
@@ -163,7 +163,7 @@ apt-get install python2.7-dbg
 echo "add-auto-load-safe-path /usr/bin/python2.7-gdb.py" >> ~/.gdbinit
 ```
 
-## the python callstack when it won't segfault
+## The python callstack when it won't segfault
 ```
 Breakpoint 1, remove_capslock_feedback (entry=entry@entry=0x108d2d0)
     at /build/buildd/gtk+2.0-2.24.23/gtk/gtkentry.c:10100
@@ -180,7 +180,7 @@ Breakpoint 1, remove_capslock_feedback (entry=entry@entry=0x108d2f0)
 ```
 Here the **remove_capslock_feedback** function is called because of: /usr/share/terminator/terminatorlib/editablelabel.py, line 93, in **_on _click_text**
 
-## the python callstack before it segfault
+## The python callstack before it segfault
 ```
 Breakpoint 1, remove_capslock_feedback (entry=0x108d2f0)
     at /build/buildd/gtk+2.0-2.24.23/gtk/gtkentry.c:10100
@@ -191,7 +191,7 @@ Breakpoint 1, remove_capslock_feedback (entry=0x108d2f0)
 **remove_capslock_feedback** doesn't seem do be triggered by a python call, maybe an issue with py-bt ?
 
 
-## function **_on_click_text** from /usr/share/terminator/editablelabel.py:93
+## Function **_on_click_text** from /usr/share/terminator/editablelabel.py:93
 Let's do more logs with this decorator
 
 ```python
@@ -205,7 +205,7 @@ def logger(func):
     return inner
 ```
 
-### Edition (double click)
+## Edition (double click)
 ```
 [29] <function set_text at 0x7f4898103398> - (<EditableLabel object at 0x7f4898133730 (terminatorlib+editablelabel+EditableLabel at 0x2809180)>, 'user@pc: /home/user 80x24'), {}
 [30] <function _on_click_text at 0x7f4898103578> - (<EditableLabel object at 0x7f4898133730 (terminatorlib+editablelabel+EditableLabel at 0x2809180)>, <EditableLabel object at 0x7f4898133730 (terminatorlib+editablelabel+EditableLabel at 0x2809180)>, <gtk.gdk.Event at 0x7f4898107c38: GDK_BUTTON_PRESS x=294,00, y=13,00, button=1>), {}
@@ -213,7 +213,7 @@ def logger(func):
 [32] <function _on_click_text at 0x7f4898103578> - (<EditableLabel object at 0x7f4898133730 (terminatorlib+editablelabel+EditableLabel at 0x2809180)>, <EditableLabel object at 0x7f4898133730 (terminatorlib+editablelabel+EditableLabel at 0x2809180)>, <gtk.gdk.Event at 0x7f4898107c38: GDK_2BUTTON_PRESS x=294,00, y=14,00, button=1>), {}
 ```
 
-### Click + focus out
+## Click + focus out
 ```
 [33] <function set_text at 0x7f4898103398> - (<EditableLabel object at 0x7f4898133730 (terminatorlib+editablelabel+EditableLabel at 0x2809180)>, 'user@pc: /home/user 80x23'), {}
 [34] <function _on_entry_keypress at 0x7f4898103848> - (<EditableLabel object at 0x7f4898133730 (terminatorlib+editablelabel+EditableLabel at 0x2809180)>, <gtk.Entry object at 0x7f48980c4e60 (GtkEntry at 0x2bd12f0)>, <gtk.gdk.Event at 0x7f4898107c10: GDK_KEY_PRESS keyval=Return>), {}
@@ -229,7 +229,7 @@ def logger(func):
 ```
 Doesn't help much...
 
-### Let's see EditLabel
+## The EditLabel class
 
 When double clicked the label is replaced by a GtkEntry 'entry' for the edition. When done the label is restored and 'entry' isn't referenced anymore. As a test I kept a reference on entry and Terminator stop crashing.
 
@@ -255,7 +255,7 @@ class EditLabel(gtk.EventBox):
 
 To simplify the debugging I isolated the suspected code into **terminator_gtk_entry.py**
 
-### Let's install more symbols
+## Let's install more symbols
 ```bash
 apt-get install libglib2.0-0-dbg
 ```
@@ -268,14 +268,14 @@ Callstack now displays more details. A signal 'state-changed' triggers **remove_
 ...
 ```
 
-### What handle connection/disconnection in gtkentry.c
+## What handle connection/disconnection in gtkentry.c ?
 1. Find a connect on 'state-changed': **gtk_entry_focus_in**
 2. Find the disconnect: **gtk_entry_focus_out**
 3. Make crash terminator with a breakpoint on **gtkentry.c:gtk_entry_focus_out**
 
 Segfault without breaking! But **_entry_to_label** is the signal handler of 'focus-out-event' and it's called! Still 'focus-out-event' isn't propagated to GtkEntry. Why ?
 
-## check GTK documentation
+## Check GTK documentation
 https://developer.gnome.org/gtk3/stable/GtkWidget.html#GtkWidget-focus-out-event
 
 ```
