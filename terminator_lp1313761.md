@@ -1,4 +1,4 @@
-# Terminator bug
+# Terminator resolved bug
 
 Terminator crashes when caps lock is toggled after starting editing tab title once terminal get focus back. The callstack shows a reference to gtkentry.c:remove_capslock_feedback (line 10099)
 
@@ -293,7 +293,7 @@ I'm no gtk/pygtk expert but it seems something is wrong in terminator about this
 diff -Naur /usr/share/terminator/terminatorlib/editablelabel.py editablelabel.py > patch.txt
 ```
 
-```python
+```
 --- /usr/share/terminator/terminatorlib/editablelabel.py	2013-01-30 12:26:17.000000000 +0100
 +++ editablelabel.py	2014-09-03 18:46:17.576421411 +0200
 @@ -108,7 +108,9 @@
@@ -308,4 +308,3 @@ diff -Naur /usr/share/terminator/terminatorlib/editablelabel.py editablelabel.py
 
      def _on_entry_activated (self, widget):
 ```
-
